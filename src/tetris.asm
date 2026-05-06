@@ -12,6 +12,7 @@ DATASEG
     t_limit      dw 20     
     g_speed      dw 8000h 
     c_shape      dw 0
+    GAME_OVER_MSG db "GAME OVER - Presiona una tecla para salir$"
 
     ; Matriz de piezas (7 piezas * 4 bloques * 2 coordenadas)
     shapes       db 0,1, 1,1, 2,1, 3,1  ; I
@@ -108,7 +109,9 @@ gravity_tick:
     
     call check_col
     or al, al
-    jnz exit_p
+    jnz exit_p  ; <--- Solo esto. Si hay colisión, salta a 'exit_p'
+    
+    jmp main_loop ; Si NO hay colisión, sigue jugando
 
 wait_frame:
     mov cx, 00h
@@ -118,8 +121,28 @@ wait_frame:
     jmp main_loop
 
 exit_p:
+    ; 1. Regresar a modo texto INMEDIATAMENTE
+    ; Esto limpia la pantalla gráfica y nos da un fondo negro limpio
     mov ax, 03h
     int 10h
+
+    ; 2. Configurar posición del cursor en el centro
+    mov ah, 02h
+    mov bh, 00h
+    mov dh, 12   ; Fila central
+    mov dl, 5    ; Columna
+    int 10h
+
+    ; 3. Imprimir el mensaje de Game Over
+    mov dx, offset game_over_msg
+    mov ah, 09h
+    int 21h
+
+    ; 4. Esperar tecla para que el usuario lea el mensaje
+    mov ah, 00h
+    int 16h
+
+    ; 5. Salir al Sistema Operativo
     mov ax, 4C00h
     int 21h
 
