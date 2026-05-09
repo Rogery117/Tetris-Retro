@@ -12,6 +12,9 @@ DATASEG
     t_limit      dw 20     
     g_speed      dw 8000h 
     c_shape      dw 0
+        ; Tabla de colores para cada pieza (7 piezas)
+    piece_colors db 0Ch, 0Eh, 09h, 0Ah, 05h, 0Dh, 0Fh
+    ; Rojo, Amarillo, Azul claro, Verde claro, Morado, Rosa claro, Blanco
     GAME_OVER_MSG db "GAME OVER - Presiona una tecla para salir$"
 
     ; Matriz de piezas (7 piezas * 4 bloques * 2 coordenadas)
@@ -313,7 +316,11 @@ draw_piece:
     xor bx, bx
     mov bl, [si]        
     add bx, g_x
-    mov cl, 0Bh         
+       ; Obtener color según c_shape
+    push bx
+    mov bx, c_shape
+    mov cl, piece_colors[bx]
+    pop bx
     call draw_sq
     add si, 2
     pop cx
