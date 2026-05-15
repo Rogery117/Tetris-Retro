@@ -14,11 +14,19 @@ Un juego de Tetris clásico desarrollado en **Ensamblador (x86)** para entornos 
 
 ## 📁 Estructura del Proyecto
 *   `/src`: Contiene el código fuente principal del juego.
-*   `/docs`: Documentación técnica del proyecto (opcional).
+*   `/docs`: Documentación técnica del proyecto.
 
 ## ⚙️ Cómo ejecutarlo
-Para correr este proyecto localmente, necesitarás un emulador como **DOSBox**:
+Para correr este proyecto localmente, necesitarás un emulador como **DOSBox** previamente instalado:
+Aqui su pagina oficial:
+https://www.dosbox.com/index.php
 
 1. Clona el repositorio:
    ```bash
    git clone https://github.com/Rogery117/Tetris-Retro
+
+2. Entra en la carpeta:
+   Tetris-Retro
+
+3. Ejecuta el archivo:
+   build.bat
