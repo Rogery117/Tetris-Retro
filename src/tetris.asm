@@ -12,19 +12,57 @@ DATASEG
     t_limit      dw 20     
     g_speed      dw 8000h 
     c_shape      dw 0
+    c_rotation   dw 0   ; Guarda la rotación actual (0, 1, 2 o 3)
+    
     ; Tabla de colores para cada pieza (7 piezas)
     piece_colors db 0Ch, 0Eh, 09h, 0Ah, 05h, 0Dh, 0Fh
     ; Rojo, Amarillo, Azul claro, Verde claro, Morado, Rosa claro, Blanco
     GAME_OVER_MSG db "GAME OVER - Presiona Enter para salir$"
 
-    ; Matriz de piezas (7 piezas * 4 bloques * 2 coordenadas)
-    shapes       db 0,1, 1,1, 2,1, 3,1  ; I
-                 db 1,1, 2,1, 1,2, 2,2  ; O
-                 db 1,0, 1,1, 1,2, 2,2  ; L
-                 db 1,0, 1,1, 1,2, 0,2  ; J
-                 db 1,1, 0,1, 1,0, 2,0  ; S
-                 db 1,1, 2,1, 1,0, 0,0  ; Z
-                 db 1,1, 0,1, 2,1, 1,0  ; T
+    ; MATRIZ DE PIEZAS (7 piezas * 4 rotaciones * 4 bloques * 2 coordenadas X,Y)
+    ; Cada rotación ocupa exactamente 8 bytes. Cada pieza ocupa 32 bytes.
+    shapes       label byte
+        ; --- 0: PIEZA I (Cian) ---
+        db 0,1, 1,1, 2,1, 3,1  ; 0°   (Horizontal)
+        db 2,0, 2,1, 2,2, 2,3  ; 90°  (Vertical)
+        db 0,2, 1,2, 2,2, 3,2  ; 180° (Horizontal corregida)
+        db 1,0, 1,1, 1,2, 1,3  ; 270° (Vertical corregida)
+
+        ; --- 1: PIEZA O (Amarillo) ---
+        db 1,1, 2,1, 1,2, 2,2  ; 0°
+        db 1,1, 2,1, 1,2, 2,2  ; 90°
+        db 1,1, 2,1, 1,2, 2,2  ; 180°
+        db 1,1, 2,1, 1,2, 2,2  ; 270°
+
+        ; --- 2: PIEZA L (Azul oscuro) ---
+        db 1,0, 1,1, 1,2, 2,2  ; 0°
+        db 0,2, 0,1, 1,1, 2,1  ; 90°
+        db 0,0, 1,0, 1,1, 1,2  ; 180°
+        db 0,1, 1,1, 2,1, 2,0  ; 270°
+
+        ; --- 3: PIEZA J (Naranja) ---
+        db 1,0, 1,1, 1,2, 0,2  ; 0°
+        db 0,1, 1,1, 2,1, 2,2  ; 90°
+        db 2,0, 1,0, 1,1, 1,2  ; 180°
+        db 0,0, 0,1, 1,1, 2,1  ; 270°
+
+        ; --- 4: PIEZA S (Verde) ---
+        db 1,1, 2,1, 0,2, 1,2  ; 0°
+        db 1,0, 1,1, 2,1, 2,2  ; 90°
+        db 1,1, 2,1, 0,2, 1,2  ; 180°
+        db 1,0, 1,1, 2,1, 2,2  ; 270°
+
+        ; --- 5: PIEZA Z (Rojo) ---
+        db 0,1, 1,1, 1,2, 2,2  ; 0°
+        db 2,0, 2,1, 1,1, 1,2  ; 90°
+        db 0,1, 1,1, 1,2, 2,2  ; 180°
+        db 2,0, 2,1, 1,1, 1,2  ; 270°
+
+        ; --- 6: PIEZA T (Morado) ---
+        db 1,1, 0,1, 2,1, 1,0  ; 0°
+        db 1,1, 1,0, 1,2, 2,1  ; 90°
+        db 1,1, 0,1, 2,1, 1,2  ; 180°
+        db 1,1, 1,0, 1,2, 0,1  ; 270°
 
 CODESEG
 inicio:
@@ -52,6 +90,8 @@ main_loop:
     je m_right
     cmp ah, 50h ; Abajo
     je f_drop
+    cmp al, 20h ; Tecla Espacio
+    je m_rotate
     cmp al, 1Bh ; ESC
     je exit_game
     jmp g_tick_bridge
@@ -71,7 +111,7 @@ m_right:
     jz g_tick_bridge
     dec g_x 
 
-g_tick_bridge: ; Puente para evitar el error "Jump out of range"
+g_tick_bridge: 
     jmp gravity_tick
 
 f_drop:
@@ -80,6 +120,19 @@ f_drop:
 
 exit_game:
     jmp exit_p
+
+m_rotate:
+    mov bx, c_rotation    ; Guardar rotación actual
+    inc c_rotation
+    cmp c_rotation, 4
+    jl test_rotation
+    mov c_rotation, 0     ; Ciclar entre 0 y 3
+test_rotation:
+    call check_col
+    or al, al
+    jz g_tick_bridge      ; Si no hay colisión, aplicar rotación
+    mov c_rotation, bx    ; Si hay colisión, restaurar anterior
+    jmp g_tick_bridge
 
 gravity_tick:
     inc t_count
@@ -100,6 +153,7 @@ gravity_tick:
     ; Reset pieza
     mov g_x, 4
     mov g_y, 0
+    mov c_rotation, 0     ; Nueva pieza empieza en posición base (0°)
     
     ; Nueva pieza aleatoria
     mov ah, 00h
@@ -112,9 +166,9 @@ gravity_tick:
     
     call check_col
     or al, al
-    jnz exit_p  ;Si hay colisión, salta a 'exit_p'
+    jnz exit_p  
     
-    jmp main_loop ; Si NO hay colisión, sigue jugando
+    jmp main_loop 
 
 wait_frame:
     mov cx, 00h
@@ -124,41 +178,49 @@ wait_frame:
     jmp main_loop
 
 exit_p:
-    ; 1. Regresar a modo texto INMEDIATAMENTE
-    ; Esto limpia la pantalla gráfica y nos da un fondo negro limpio
     mov ax, 03h
     int 10h
 
-    ; 2. Configurar posición del cursor en el centro
     mov ah, 02h
     mov bh, 00h
-    mov dh, 12   ; Fila central
-    mov dl, 1    ; Reduje el margen para que el mensaje quepa mejor centrado
+    mov dh, 12   
+    mov dl, 1    
     int 10h
 
-    ; 3. Imprimir el mensaje de Game Over
     mov dx, offset GAME_OVER_MSG
     mov ah, 09h
     int 21h
 
-    ; 4. Esperar tecla ENTER para salir (Bucle corregido)
 LimpiarYEsperar:
-    mov ah, 0Ch          ; Función DOS: Limpiar búfer y ejecutar entrada
-    mov al, 08h          ; Sub-función: Leer consola sin eco (espera tecla)
-    int 21h              ; Llama a DOS. El ASCII de la tecla queda en AL
+    mov ah, 0Ch          
+    mov al, 08h          
+    int 21h              
 
-    cmp al, 0Dh          ; ¿Es el código ASCII de Enter (13 decimal / 0Dh)?
-    jne LimpiarYEsperar  ; Si NO es Enter, vuelve a limpiar y esperar
+    cmp al, 0Dh          
+    jne LimpiarYEsperar  
 
 SalirPrograma:
-    mov ah, 4Ch          ; Terminar proceso y regresar al sistema
+    mov ah, 4Ch          
     int 21h
 
-; --- LÓGICA DE COLISIÓN ---
+; --- LÓGICA DE COLISIÓN MODIFICADA ---
 check_col proc
     mov cx, 4           
-    mov si, c_shape
-    shl si, 3           
+    
+    ; Cálculo indexado seguro de la matriz
+    push ax
+    push dx
+    mov ax, c_shape
+    mov dx, 32
+    mul dx              ; ax = c_shape * 32
+    mov si, ax
+    mov ax, c_rotation
+    mov dx, 8
+    mul dx              ; ax = c_rotation * 8
+    add si, ax
+    pop dx
+    pop ax
+    
     add si, offset shapes
 col_loop:
     push cx
@@ -199,11 +261,23 @@ is_col:
     ret
 check_col endp
 
-; --- FIJAR PIEZA ---
+; --- FIJAR PIEZA MODIFICADA ---
 lock_p proc
     mov cx, 4
-    mov si, c_shape
-    shl si, 3
+    
+    push ax
+    push dx
+    mov ax, c_shape
+    mov dx, 32
+    mul dx
+    mov si, ax
+    mov ax, c_rotation
+    mov dx, 8
+    mul dx
+    add si, ax
+    pop dx
+    pop ax
+    
     add si, offset shapes
 lock_loop:
     xor ax, ax
@@ -277,7 +351,7 @@ clear_top_loop:
     ret
 check_lines endp
 
-; --- GRÁFICOS ---
+; --- GRÁFICOS MODIFICADOS ---
 draw_everything proc
     mov ax, 0A000h
     mov es, ax
@@ -310,8 +384,20 @@ next_block:
     jl y_loop
     
     mov cx, 4
-    mov si, c_shape
-    shl si, 3
+    
+    push ax
+    push dx
+    mov ax, c_shape
+    mov dx, 32
+    mul dx
+    mov si, ax
+    mov ax, c_rotation
+    mov dx, 8
+    mul dx
+    add si, ax
+    pop dx
+    pop ax
+    
     add si, offset shapes
 draw_piece:
     push cx
@@ -321,7 +407,6 @@ draw_piece:
     xor bx, bx
     mov bl, [si]        
     add bx, g_x
-       ; Obtener color según c_shape
     push bx
     mov bx, c_shape
     mov cl, piece_colors[bx]
