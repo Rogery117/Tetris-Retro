@@ -21,4 +21,4 @@ Para correr este proyecto localmente, necesitarás un emulador como **DOSBox**:
 
 1. Clona el repositorio:
    ```bash
-   git clone [https://github.com/tu-usuario/Tetris-Retro.git](https://github.com/tu-usuario/Tetris-Retro.git)
+   git clone https://github.com/Rogery117/Tetris-Retro
