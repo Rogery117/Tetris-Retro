@@ -3,8 +3,8 @@ STACK 100h
 
 DATASEG
     ; Variables de configuración
-    OFF_X        dw 120
-    OFF_Y        dw 10
+    OFF_X         dw 120
+    OFF_Y         dw 10
     board        db 200 dup(0)
     g_x          dw 4
     g_y          dw 0
@@ -12,10 +12,10 @@ DATASEG
     t_limit      dw 20     
     g_speed      dw 8000h 
     c_shape      dw 0
-        ; Tabla de colores para cada pieza (7 piezas)
+    ; Tabla de colores para cada pieza (7 piezas)
     piece_colors db 0Ch, 0Eh, 09h, 0Ah, 05h, 0Dh, 0Fh
     ; Rojo, Amarillo, Azul claro, Verde claro, Morado, Rosa claro, Blanco
-    GAME_OVER_MSG db "GAME OVER - Presiona una tecla para salir$"
+    GAME_OVER_MSG db "GAME OVER - Presiona Enter para salir$"
 
     ; Matriz de piezas (7 piezas * 4 bloques * 2 coordenadas)
     shapes       db 0,1, 1,1, 2,1, 3,1  ; I
@@ -112,7 +112,7 @@ gravity_tick:
     
     call check_col
     or al, al
-    jnz exit_p  ; <--- Solo esto. Si hay colisión, salta a 'exit_p'
+    jnz exit_p  ;Si hay colisión, salta a 'exit_p'
     
     jmp main_loop ; Si NO hay colisión, sigue jugando
 
@@ -133,20 +133,25 @@ exit_p:
     mov ah, 02h
     mov bh, 00h
     mov dh, 12   ; Fila central
-    mov dl, 5    ; Columna
+    mov dl, 1    ; Reduje el margen para que el mensaje quepa mejor centrado
     int 10h
 
     ; 3. Imprimir el mensaje de Game Over
-    mov dx, offset game_over_msg
+    mov dx, offset GAME_OVER_MSG
     mov ah, 09h
     int 21h
 
-    ; 4. Esperar tecla para que el usuario lea el mensaje
-    mov ah, 00h
-    int 16h
+    ; 4. Esperar tecla ENTER para salir (Bucle corregido)
+LimpiarYEsperar:
+    mov ah, 0Ch          ; Función DOS: Limpiar búfer y ejecutar entrada
+    mov al, 08h          ; Sub-función: Leer consola sin eco (espera tecla)
+    int 21h              ; Llama a DOS. El ASCII de la tecla queda en AL
 
-    ; 5. Salir al Sistema Operativo
-    mov ax, 4C00h
+    cmp al, 0Dh          ; ¿Es el código ASCII de Enter (13 decimal / 0Dh)?
+    jne LimpiarYEsperar  ; Si NO es Enter, vuelve a limpiar y esperar
+
+SalirPrograma:
+    mov ah, 4Ch          ; Terminar proceso y regresar al sistema
     int 21h
 
 ; --- LÓGICA DE COLISIÓN ---
